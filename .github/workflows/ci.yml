@@ -43,8 +43,8 @@ jobs:
         commit_owner: Yarden-zamir
         commit_email: dev@yarden-zamir.com
         install: |
+          bin.install gh-source.zsh
           libexec.install Dir["*"]
-          bin.install_symlink libexec/gh-source.zsh
         # https://github.com/{GITHUB_OWNER}/{REPO_NAME}/releases/download/{TAG}/{REPO_NAME}-{VERSION}-{OPERATING_SYSTEM}-{ARCHITECTURE}.tar.gz'
         # Darwin AMD pre-existing path example: https://github.com/justintime50/myrepo/releases/download/v1.2.0/myrepo-1.2.0-darwin-amd64.tar.gz
         # Linux ARM pre-existing path example: https://github.com/justintime50/myrepo/releases/download/v1.2.0/myrepo-1.2.0-linux-arm64.tar.gz
