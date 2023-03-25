@@ -33,10 +33,13 @@ jobs:
         body: ${{ steps.tag_version.outputs.changelog }}
         token: ${{ secrets.TOKEN }}
 
-    - name: Update Homebrew formula
-      uses: dawidd6/action-homebrew-bump-formula@v3
-      with:
-        token: ${{secrets.TOKEN}}
-        tap: ${{ github.event.repository.owner.login }}/tap
-        formula: ${{ github.event.repository.name }}
-        tag: ${{ steps.tag_version.outputs.new_tag }}
+    - name: Release my project to homebrew
+      run: |
+        brew tap ${{ github.event.repository.owner.login }}/tap
+        brew bump-formula-pr \
+          --force \
+          --url=${{ github.event.repository.html_url }}/archive/${{ steps.tag_version.outputs.new_tag }}.tar.gz \
+          --sha256=$(curl -L ${{ github.event.repository.html_url }}/archive/${{ steps.tag_version.outputs.new_tag }}.tar.gz | shasum -a 256 | cut -d ' ' -f 1) \
+          ${{ github.event.repository.name }}
+      env:
+        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.TOKEN }}
