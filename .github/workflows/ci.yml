@@ -40,6 +40,7 @@ jobs:
           --force \
           --url=${{ github.event.repository.html_url }}/archive/${{ steps.tag_version.outputs.new_tag }}.tar.gz \
           --sha256=$(curl -L ${{ github.event.repository.html_url }}/archive/${{ steps.tag_version.outputs.new_tag }}.tar.gz | shasum -a 256 | cut -d ' ' -f 1) \
+          --message="Update ${{ github.event.repository.name }} to ${{ steps.tag_version.outputs.new_tag }}.    /add-label auto-merge" \
           ${{ github.event.repository.name }}
       env:
         HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.TOKEN }}
