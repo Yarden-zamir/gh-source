@@ -1,8 +1,9 @@
 gh_source() {
-    [ ! type -p gh >/dev/null] && {
+    # check if gh cli is installed
+    if ! type -p gh >/dev/null; then 
         echo "gh not found on the system" >&2
         exit 1
-    }
+    fi
     [ -z "$PLUGINS" ] && export PLUGINS=""
     [ -z "$1" ] || [  "$1" = "--help" ] && {
         echo "Usage: prog [options] [plugin] [install_command] [install_location]"
@@ -61,3 +62,12 @@ gh_source() {
 
     eval $install_command
 }
+alias grc=gh_source
+alias grcu='gh_source --update'
+alias grcl='gh_source --list'
+
+
+# add shell completion to zsh FPATH
+if [ ! -z "$ZSH_VERSION" ]; then
+    export FPATH=$FPATH:$(dirname $0)/zsh-completion
+fi
