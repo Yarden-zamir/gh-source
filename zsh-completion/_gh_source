@@ -1,0 +1,38 @@
+#compdef gh_source
+
+local state
+local arguments=(
+  '1:plugin:->plugin'
+  '2:install_command:->install_command'
+  '3:install_location:->install_location'
+  '4:option:->options'
+  '--help[print help message]'
+  '--update[update all plugins]'
+  '--list[list all plugins]'
+)
+
+_arguments -C "$arguments[@]" && return 0
+
+case $state in
+  options)
+    local option_names=(
+      '--help'
+      '--update'
+      '--list'
+    )
+    _describe -t options 'options' option_names
+    ;;
+  plugin)
+    _files
+    _message "plugin: the plugin to source. If no install_command is passed, it will assume the last segment is the file to source (default install command)"
+    ;;
+  install_command)
+    _message "install_command: the command to run to install the plugin (default: 'source {}/\$(echo \"\$1\" | cut -d'/' -f3-)')"
+    ;;
+  install_location)
+    _files -/
+    _message "install_location: the location to install the plugin to (default: \$GH_SOURCE_INSTALL_LOCATION/\$(basename \$install_source))"
+    ;;
+esac
+
+return 1
