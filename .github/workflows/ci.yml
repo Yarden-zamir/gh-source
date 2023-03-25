@@ -37,5 +37,5 @@ jobs:
       uses: dawidd6/action-homebrew-bump-formula@v3
       with:
         token: ${{secrets.TOKEN}}
-        tap: Yarden-zamir/homebrew-tap
+        tap: Yarden-zamir/tap
         formula: gh-source
