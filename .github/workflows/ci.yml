@@ -37,6 +37,6 @@ jobs:
       uses: dawidd6/action-homebrew-bump-formula@v3
       with:
         token: ${{secrets.TOKEN}}
-        tap: Yarden-zamir/tap
-        formula: gh-source
+        tap: ${{ github.event.repository.owner.login }}/tap
+        formula: ${{ github.event.repository.name }}}
         tag: ${{ steps.tag_version.outputs.new_tag }}
