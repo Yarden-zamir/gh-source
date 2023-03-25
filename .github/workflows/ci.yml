@@ -1,0 +1,58 @@
+name: CI - tag and release
+on:
+  push:
+    branches:
+    - main
+    paths-ignore:
+      - 'README.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE/**'
+      - '.github/dependabot.yml'
+      - '.github/FUNDING.yml'
+      - '.github/SECURITY.md'
+      - 'LICENSE.md'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v6.1
+      with:
+        github_token: ${{ secrets.TOKEN }}
+
+    - name: Create a GitHub release
+      uses: ncipollo/release-action@v1
+      with:
+        tag: ${{ steps.tag_version.outputs.new_tag }}
+        name: Release ${{ steps.tag_version.outputs.new_tag }}
+        body: ${{ steps.tag_version.outputs.changelog }}
+        token: ${{ secrets.TOKEN }}
+
+    - name: Release my project to my Homebrew tap
+      uses: Justintime50/homebrew-releaser@v0.15.0
+      with:
+        homebrew_owner: Yarden-zamir
+        homebrew_tap: tap
+        formula_folder: Formula
+        github_token: ${{ secrets.TOKEN }}
+        commit_owner: Yarden-zamir
+        commit_email: dev@yarden-zamir.com
+        install: |
+          libexec.install Dir["*"]
+        # https://github.com/{GITHUB_OWNER}/{REPO_NAME}/releases/download/{TAG}/{REPO_NAME}-{VERSION}-{OPERATING_SYSTEM}-{ARCHITECTURE}.tar.gz'
+        # Darwin AMD pre-existing path example: https://github.com/justintime50/myrepo/releases/download/v1.2.0/myrepo-1.2.0-darwin-amd64.tar.gz
+        # Linux ARM pre-existing path example: https://github.com/justintime50/myrepo/releases/download/v1.2.0/myrepo-1.2.0-linux-arm64.tar.gz
+        target_darwin_amd64: false
+        target_darwin_arm64: false
+        target_linux_amd64: false
+        target_linux_arm64: false
+
+        update_readme_table: true
+
+        skip_commit: false
+        debug: true
