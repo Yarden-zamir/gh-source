@@ -38,5 +38,5 @@ jobs:
       with:
         token: ${{secrets.TOKEN}}
         tap: ${{ github.event.repository.owner.login }}/tap
-        formula: ${{ github.event.repository.name }}}
+        formula: ${{ github.event.repository.name }}
         tag: ${{ steps.tag_version.outputs.new_tag }}
