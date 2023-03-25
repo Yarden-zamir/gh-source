@@ -39,3 +39,4 @@ jobs:
         token: ${{secrets.TOKEN}}
         tap: Yarden-zamir/tap
         formula: gh-source
+        tag: ${{ steps.tag_version.outputs.new_tag }}
