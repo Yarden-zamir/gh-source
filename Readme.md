@@ -13,7 +13,7 @@ brew install yarden-zamir/tap/gh-source
 ```
 then in your `.zshrc`   
 ```sh
-source ~/location/gh-source/gh-source.zsh
+source gh-source.zsh
 ```
 (This is the last time you need to clone shell stuff manually)
 ## Problem domains / needs
