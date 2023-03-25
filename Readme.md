@@ -8,7 +8,7 @@ git clone https://github.com/yarden-zamir/gh-source.git
 ```
 then in your `.zshrc`   
 ```sh
-source ~/location/yarden-zamir/gh-source/gh-source.zsh
+source ~/location/gh-source/gh-source.zsh
 ```
 (This is the last time you need to clone shell stuff manually)
 ## Problem domains / needs
