@@ -3,8 +3,13 @@ This is a plugin manager for people who don't like plugin managers. It's a simpl
 
 ## Installation
 in the terminal
+either clone this repo
 ```sh
 git clone https://github.com/yarden-zamir/gh-source.git
+```
+or use a package manager
+```sh
+brew install yarden-zamir/tap/gh-source
 ```
 then in your `.zshrc`   
 ```sh
