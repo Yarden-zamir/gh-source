@@ -2,7 +2,7 @@ gh_source() {
     # check if gh cli is installed
     if ! type -p gh >/dev/null; then 
         echo "gh not found on the system" >&2
-        exit 1
+        return
     fi
     [ -z "$PLUGINS" ] && export PLUGINS=""
     [ -z "$1" ] || [  "$1" = "--help" ] && {
@@ -59,13 +59,9 @@ gh_source() {
     install_command=${install_command//\{\}/$install_location}
     
     [ -d "$install_location" ] || gh repo clone $install_source $install_location &>/dev/null
-
+    set --
     eval $install_command
 }
-alias grc=gh_source
-alias grcu='gh_source --update'
-alias grcl='gh_source --list'
-
 
 # add shell completion to zsh FPATH
 if [ ! -z "$ZSH_VERSION" ]; then
