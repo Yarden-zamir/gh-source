@@ -16,10 +16,19 @@ gh_source() {
         echo "  --help: print this help message"
         echo "  --update: update all plugins"
         echo "  --list: list all plugins"
+        echo "  --require: check if a plugin is installed, if not, exit with error code 1"
         echo "Arguments:"
         echo "  plugin: the plugin to source. If no install_command is passed, it will assume the last segment is the file to source (default install command)"
         echo "  install_command: the command to run to install the plugin (default: 'source {}/\$(echo \"\$1\" | cut -d'/' -f3-) where {} is replaced by install location. meaning that if your plugin is owner/repo/plug.zsh, it will run 'source \$install_location/plug.zsh"
         echo "  install_location: the location to install the plugin to (default: \$GH_SOURCE_INSTALL_LOCATION/\$(basename \$install_source))"
+        return
+    }
+    [ "$1" = "--require" ] && {
+        required_plugin=$2
+        if ! echo $PLUGINS | grep -q $required_plugin; then
+            echo "Required plugin : $required_plugin not found" >&2
+            return 1
+        fi
         return
     }
     [ "$1" = "--update" ] && {

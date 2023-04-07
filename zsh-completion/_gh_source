@@ -9,6 +9,7 @@ local arguments=(
   '--help[print help message]'
   '--update[update all plugins]'
   '--list[list all plugins]'
+  '--require:check if a plugin is installed, if not, exit with error code 1'
 )
 
 _arguments -C "$arguments[@]" && return 0
