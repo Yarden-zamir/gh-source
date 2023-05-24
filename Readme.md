@@ -62,3 +62,6 @@ Arguments:
   install_command: the command to run to install the plugin (default: 'source {}/$(echo "$1" | cut -d'/' -f3-) where {} is replaced by install location. meaning that if your plugin is owner/repo/plug.zsh, it will run 'source $install_location/plug.zsh
   install_location: the location to install the plugin to (default: $GH_SOURCE_INSTALL_LOCATION/$(basename $install_source))
 ```
+
+https://github.com/Yarden-zamir/gh-source/assets/8178413/a4c58620-74fe-4f37-8cb1-4c1ad9ff2428
+
