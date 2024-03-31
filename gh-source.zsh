@@ -76,6 +76,19 @@ gh_source() {
     eval $install_command
 }
 
+gh-source () {
+    gh_source $@
+}
+
+ghsource () {
+    gh_source $@
+}
+
+ghs () {
+    gh_source $@
+}
+
+
 # add shell completion to zsh FPATH # todo use official brew implementation
 if [ ! -z "$ZSH_VERSION" ]; then
     export FPATH=$FPATH:$(dirname $0)/zsh-completion
