@@ -67,7 +67,11 @@ gh_source() {
     
     install_command=${install_command//\{\}/$install_location}
     
-    [ -d "$install_location" ] || gh repo clone $install_source $install_location &>/dev/null
+    [ -d "$install_location" ] || {
+        echo "Cloning $install_source to $install_location"
+        gh auth status || return
+        gh repo clone $install_source $install_location &>/dev/null
+    }
     set --
     eval $install_command
 }
