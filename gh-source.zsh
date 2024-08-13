@@ -1,11 +1,11 @@
 gh_source() {
     # check if gh cli is installed
-    if ! type -p gh >/dev/null; then 
+    if ! type -p gh >/dev/null; then
         echo "gh not found on the system" >&2
         return
     fi
     [ -z "$PLUGINS" ] && export PLUGINS=""
-    [ -z "$1" ] || [  "$1" = "--help" ] && {
+    [ -z "$1" ] || [ "$1" = "--help" ] && {
         echo "Usage: prog [options] [plugin] [install_command] [install_location]"
         echo "Examples:"
         echo "  gh-source owner/repo/script.zsh"
@@ -25,7 +25,7 @@ gh_source() {
     }
     [ "$1" = "--require" ] && {
         required_plugin=$2
-        if ! echo $PLUGINS | grep -q $required_plugin; then
+        if ! echo "$PLUGINS" | grep -q "$required_plugin"; then
             echo "Required plugin : $required_plugin not found" >&2
             return 1
         fi
@@ -33,7 +33,7 @@ gh_source() {
     }
     [ "$1" = "--update" ] && {
         if [ ! -z "$ZSH_VERSION" ]; then
-            old_shwordsplit=$(set -o | grep shwordsplit | awk  '{print $2}')
+            old_shwordsplit=$(set -o | grep shwordsplit | awk '{print $2}')
             set -o shwordsplit
         fi
 
@@ -44,18 +44,18 @@ gh_source() {
 
             install_source=$(echo "$plugin" | cut -d'/' -f1,2)
             install_command=$(echo "$plugin" | cut -d'/' -f3-)
-            install_location=$GH_SOURCE_install_location/$(basename $install_source)
-            
+            install_location=$GH_SOURCE_install_location/$(basename "$install_source")
+
             install_command=${install_command//\{\}/$install_location)}
-            [ -d "$install_location" ] && \
-                    git --git-dir $install_location/.git --work-tree $install_location pull && \
-                    git --git-dir $install_location/.git --work-tree $install_location reset --hard --quiet
+            [ -d "$install_location" ] &&
+                git --git-dir "$install_location"/.git --work-tree "$install_location" pull &&
+                git --git-dir "$install_location"/.git --work-tree "$install_location" reset --hard --quiet
         done
         echo "Done updating"
         return
     }
     [ "$1" = "--list" ] && {
-        echo $PLUGINS | tr ' ' '\n'
+        echo "$PLUGINS" | tr ' ' '\n'
         return
     }
     export PLUGINS="$PLUGINS $1"
@@ -63,33 +63,35 @@ gh_source() {
 
     install_source=$(echo "$1" | cut -d'/' -f1,2)
     install_command=${2:-"source {}/$(echo "$1" | cut -d'/' -f3-)"}
-    install_location=${3:-$GH_SOURCE_install_location/$(basename $install_source)}
-    
+    install_location=${3:-$GH_SOURCE_install_location/$(basename "$install_source")}
+
     install_command=${install_command//\{\}/$install_location}
-    
+
     [ -d "$install_location" ] || {
         echo "Cloning $install_source to $install_location"
-        gh auth status || return
-        gh repo clone $install_source $install_location &>/dev/null
+        gh auth status &>/dev/null || {
+            echo "You need to authenticate with gh cli first" >&2
+            return
+        }
+        gh repo clone "$install_source" "$install_location" &>/dev/null
     }
     set --
-    eval $install_command
+    eval "$install_command"
 }
 
-gh-source () {
+gh-source() {
+    gh_source "$@"
+}
+
+ghsource() {
     gh_source $@
 }
 
-ghsource () {
+ghs() {
     gh_source $@
 }
-
-ghs () {
-    gh_source $@
-}
-
 
 # add shell completion to zsh FPATH # todo use official brew implementation
 if [ ! -z "$ZSH_VERSION" ]; then
-    export FPATH=$FPATH:$(dirname $0)/zsh-completion
+    export FPATH=$FPATH:$(dirname "$0")/zsh-completion
 fi
