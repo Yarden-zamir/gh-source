@@ -1,5 +1,5 @@
 # gh-source
-This is a plugin manager for people who don't like plugin managers. It's a simple shell function that downloads and installs plugins from GitHub. It's designed to be used with [zsh](http://www.zsh.org/), but it should work with any shell.
+This is a plugin manager for people who don't like plugin managers. It's a simple shell function that downloads and installs plugins from GitHub as part of the sourcing step. It's designed to be used with [zsh](http://www.zsh.org/), but it should work with any shell.
 
 ## Installation
 in the terminal
