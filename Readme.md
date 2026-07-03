@@ -8,6 +8,9 @@ either clone this repo
 git clone https://github.com/yarden-zamir/gh-source.git
 ```
 or use a package manager
+
+Homebrew tap: https://github.com/Yarden-zamir/homebrew-tap
+
 ```sh
 brew install yarden-zamir/tap/gh-source
 ```
@@ -64,4 +67,3 @@ Arguments:
 ```
 
 https://github.com/Yarden-zamir/gh-source/assets/8178413/a4c58620-74fe-4f37-8cb1-4c1ad9ff2428
-
