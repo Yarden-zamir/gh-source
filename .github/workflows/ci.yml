@@ -15,9 +15,11 @@ on:
 jobs:
   update:
     runs-on: macos-latest
+    outputs:
+      tag: ${{ steps.tag_version.outputs.new_tag }}
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Bump version and push tag
       id: tag_version
@@ -33,14 +35,12 @@ jobs:
         body: ${{ steps.tag_version.outputs.changelog }}
         token: ${{ secrets.TOKEN }}
 
-    - name: Release my project to homebrew
-      run: |
-        brew tap ${{ github.event.repository.owner.login }}/tap
-        brew bump-formula-pr \
-          --force \
-          --url=${{ github.event.repository.html_url }}/archive/${{ steps.tag_version.outputs.new_tag }}.tar.gz \
-          --sha256=$(curl -L ${{ github.event.repository.html_url }}/archive/${{ steps.tag_version.outputs.new_tag }}.tar.gz | shasum -a 256 | cut -d ' ' -f 1) \
-          --message="Update ${{ github.event.repository.name }} to ${{ steps.tag_version.outputs.new_tag }}.    /auto-merge" \
-          ${{ github.event.repository.name }}
-      env:
-        HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.TOKEN }}
+  homebrew:
+    needs: update
+    uses: Yarden-zamir/homebrew-tap/.github/workflows/sync-formula.yml@main
+    with:
+      formula: gh-source
+      tag: ${{ needs.update.outputs.tag }}
+      repository: Yarden-zamir/gh-source
+    secrets:
+      token: ${{ secrets.TOKEN }}
