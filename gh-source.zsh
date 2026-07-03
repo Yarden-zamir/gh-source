@@ -1,10 +1,107 @@
-gh_source() {
-    # check if gh cli is installed
-    if ! type -p gh >/dev/null; then
-        echo "gh not found on the system" >&2
+if [ ! -z "$ZSH_VERSION" ]; then
+    typeset -ga GH_SOURCE_PLUGINS
+fi
+
+_gh_source_parse_plugin() {
+    _gh_source_plugin=$1
+
+    if [ -z "$_gh_source_plugin" ] || [ "$_gh_source_plugin" = "${_gh_source_plugin#*/}" ]; then
+        echo "Invalid plugin: $_gh_source_plugin" >&2
+        return 1
+    fi
+
+    _gh_source_owner=${_gh_source_plugin%%/*}
+    _gh_source_rest=${_gh_source_plugin#*/}
+    _gh_source_repo=${_gh_source_rest%%/*}
+
+    if [ -z "$_gh_source_owner" ] || [ -z "$_gh_source_repo" ]; then
+        echo "Invalid plugin: $_gh_source_plugin" >&2
+        return 1
+    fi
+
+    _gh_source_install_source="$_gh_source_owner/$_gh_source_repo"
+    if [ "$_gh_source_rest" = "$_gh_source_repo" ]; then
+        _gh_source_plugin_path=""
+    else
+        _gh_source_plugin_path=${_gh_source_rest#*/}
+    fi
+}
+
+_gh_source_register_plugin() {
+    if [ ! -z "$ZSH_VERSION" ]; then
+        GH_SOURCE_PLUGINS+=("$1")
+    fi
+
+    if [ -z "${PLUGINS-}" ]; then
+        export PLUGINS="$1"
+    else
+        export PLUGINS="$PLUGINS $1"
+    fi
+}
+
+_gh_source_require_plugin() {
+    required_plugin=$1
+
+    if [ -z "$required_plugin" ]; then
+        echo "Required plugin not provided" >&2
+        return 1
+    fi
+
+    if [ ! -z "$ZSH_VERSION" ]; then
+        for plugin in "${GH_SOURCE_PLUGINS[@]}"; do
+            [ "$plugin" = "$required_plugin" ] && return 0
+            _gh_source_parse_plugin "$plugin" >/dev/null 2>&1 && [ "$_gh_source_install_source" = "$required_plugin" ] && return 0
+        done
+    else
+        for plugin in $PLUGINS; do
+            [ "$plugin" = "$required_plugin" ] && return 0
+            _gh_source_parse_plugin "$plugin" >/dev/null 2>&1 && [ "$_gh_source_install_source" = "$required_plugin" ] && return 0
+        done
+    fi
+
+    echo "Required plugin : $required_plugin not found" >&2
+    return 1
+}
+
+_gh_source_list_plugins() {
+    if [ ! -z "$ZSH_VERSION" ]; then
+        for plugin in "${GH_SOURCE_PLUGINS[@]}"; do
+            echo "$plugin"
+        done
         return
     fi
-    [ -z "$PLUGINS" ] && export PLUGINS=""
+
+    for plugin in $PLUGINS; do
+        echo "$plugin"
+    done
+}
+
+_gh_source_ensure_repo() {
+    [ -d "$2" ] && return 0
+
+    if ! type -p gh >/dev/null; then
+        echo "gh not found on the system" >&2
+        return 1
+    fi
+
+    echo "Cloning $1 to $2"
+    gh auth status &>/dev/null || {
+        echo "You need to authenticate with gh cli first" >&2
+        return 1
+    }
+
+    gh repo clone "$1" "$2" &>/dev/null || {
+        echo "Failed to clone $1 to $2" >&2
+        return 1
+    }
+
+    [ -d "$2" ] || {
+        echo "Clone reported success but $2 does not exist" >&2
+        return 1
+    }
+}
+
+gh_source() {
     [ -z "$1" ] || [ "$1" = "--help" ] && {
         echo "Usage: prog [options] [plugin] [install_command] [install_location]"
         echo "Examples:"
@@ -19,34 +116,34 @@ gh_source() {
         echo "  --require: check if a plugin is installed, if not, exit with error code 1"
         echo "Arguments:"
         echo "  plugin: the plugin to source. If no install_command is passed, it will assume the last segment is the file to source (default install command)"
-        echo "  install_command: the command to run to install the plugin (default: 'source {}/\$(echo \"\$1\" | cut -d'/' -f3-) where {} is replaced by install location. meaning that if your plugin is owner/repo/plug.zsh, it will run 'source \$install_location/plug.zsh"
-        echo "  install_location: the location to install the plugin to (default: \$GH_SOURCE_INSTALL_LOCATION/\$(basename \$install_source))"
+        echo "  install_command: the command to run after the plugin is installed. {} is replaced by install location"
+        echo "  install_location: the location to install the plugin to (default: \$GH_SOURCE_INSTALL_LOCATION/<repo>)"
         return
     }
     [ "$1" = "--require" ] && {
-        required_plugin=$2
-        if ! echo "$PLUGINS" | grep -q "$required_plugin"; then
-            echo "Required plugin : $required_plugin not found" >&2
-            return 1
-        fi
-        return
+        _gh_source_require_plugin "$2"
+        return $?
     }
     [ "$1" = "--update" ] && {
-        if [ ! -z "$ZSH_VERSION" ]; then
-            old_shwordsplit=$(set -o | grep shwordsplit | awk '{print $2}')
-            set -o shwordsplit
+        if ! type -p git >/dev/null; then
+            echo "git not found on the system" >&2
+            return 1
         fi
 
         GH_SOURCE_install_location=${GH_SOURCE_INSTALL_LOCATION:-$HOME/Github}
 
-        for plugin in $PLUGINS; do
+        if [ ! -z "$ZSH_VERSION" ]; then
+            plugins=("${GH_SOURCE_PLUGINS[@]}")
+        else
+            plugins=($PLUGINS)
+        fi
+
+        for plugin in "${plugins[@]}"; do
             echo "Updating $plugin"
 
-            install_source=$(echo "$plugin" | cut -d'/' -f1,2)
-            install_command=$(echo "$plugin" | cut -d'/' -f3-)
-            install_location=$GH_SOURCE_install_location/$(basename "$install_source")
+            _gh_source_parse_plugin "$plugin" || return 1
+            install_location=$GH_SOURCE_install_location/$_gh_source_repo
 
-            install_command=${install_command//\{\}/$install_location)}
             [ -d "$install_location" ] &&
                 git --git-dir "$install_location"/.git --work-tree "$install_location" pull &&
                 git --git-dir "$install_location"/.git --work-tree "$install_location" reset --hard --quiet
@@ -55,28 +152,32 @@ gh_source() {
         return
     }
     [ "$1" = "--list" ] && {
-        echo "$PLUGINS" | tr ' ' '\n'
+        _gh_source_list_plugins
         return
     }
-    export PLUGINS="$PLUGINS $1"
+
+    _gh_source_parse_plugin "$1" || return 1
+    _gh_source_register_plugin "$1"
     GH_SOURCE_install_location=${GH_SOURCE_INSTALL_LOCATION:-$HOME/Github}
 
-    install_source=$(echo "$1" | cut -d'/' -f1,2)
-    install_command=${2:-"source {}/$(echo "$1" | cut -d'/' -f3-)"}
-    install_location=${3:-$GH_SOURCE_install_location/$(basename "$install_source")}
+    install_location=${3:-$GH_SOURCE_install_location/$_gh_source_repo}
 
-    install_command=${install_command//\{\}/$install_location}
+    _gh_source_ensure_repo "$_gh_source_install_source" "$install_location" || return 1
 
-    [ -d "$install_location" ] || {
-        echo "Cloning $install_source to $install_location"
-        gh auth status &>/dev/null || {
-            echo "You need to authenticate with gh cli first" >&2
-            return
-        }
-        gh repo clone "$install_source" "$install_location" &>/dev/null
-    }
+    if [ $# -ge 2 ] && [ ! -z "$2" ]; then
+        install_command=${2//\{\}/$install_location}
+        set --
+        eval "$install_command"
+        return $?
+    fi
+
+    if [ -z "$_gh_source_plugin_path" ]; then
+        echo "No plugin path provided for $1 and no install command was passed" >&2
+        return 1
+    fi
+
     set --
-    eval "$install_command"
+    source "$install_location/$_gh_source_plugin_path"
 }
 
 gh-source() {
@@ -93,5 +194,6 @@ ghs() {
 
 # add shell completion to zsh FPATH # todo use official brew implementation
 if [ ! -z "$ZSH_VERSION" ]; then
-    export FPATH=$FPATH:$(dirname "$0")/zsh-completion
+    _gh_source_script=${(%):-%x}
+    export FPATH=$FPATH:${_gh_source_script:A:h}/zsh-completion
 fi
