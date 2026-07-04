@@ -5,6 +5,9 @@ on:
     - main
     paths-ignore:
       - 'README.md'
+      - 'Readme.md'
+      - 'readme.md'
+      - '.github/workflows/**'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/PULL_REQUEST_TEMPLATE/**'
       - '.github/dependabot.yml'
@@ -20,6 +23,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
 
     - name: Bump version and push tag
       id: tag_version
@@ -27,12 +32,54 @@ jobs:
       with:
         github_token: ${{ secrets.TOKEN }}
 
+    - name: Build release notes
+      id: release_notes
+      env:
+        TAG: ${{ steps.tag_version.outputs.new_tag }}
+      run: |
+        git fetch --force --tags
+        previous_tag=""
+        for candidate in $(git tag --sort=-creatordate); do
+          if [ "$candidate" != "$TAG" ]; then
+            previous_tag="$candidate"
+            break
+          fi
+        done
+
+        if [ -n "$previous_tag" ]; then
+          range="$previous_tag..HEAD"
+        else
+          range="HEAD"
+        fi
+
+        {
+          echo "## Changelog"
+          echo
+          if [ -n "$previous_tag" ]; then
+            echo "Changes since $previous_tag."
+            echo
+          fi
+          for commit in $(git rev-list --reverse "$range"); do
+            short="$(git rev-parse --short "$commit")"
+            subject="$(git log -1 --format=%s "$commit")"
+            body="$(git log -1 --format=%b "$commit")"
+            echo "- $short $subject"
+            if [ -n "$body" ]; then
+              while IFS= read -r line; do
+                if [ -n "$line" ]; then
+                  echo "  $line"
+                fi
+              done <<< "$body"
+            fi
+          done
+        } > release-notes.md
+
     - name: Create a GitHub release
       uses: ncipollo/release-action@v1
       with:
         tag: ${{ steps.tag_version.outputs.new_tag }}
         name: Release ${{ steps.tag_version.outputs.new_tag }}
-        body: ${{ steps.tag_version.outputs.changelog }}
+        bodyFile: release-notes.md
         token: ${{ secrets.TOKEN }}
 
   homebrew:
