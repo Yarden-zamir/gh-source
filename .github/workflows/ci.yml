@@ -7,7 +7,6 @@ on:
       - 'README.md'
       - 'Readme.md'
       - 'readme.md'
-      - '.github/workflows/**'
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/PULL_REQUEST_TEMPLATE/**'
       - '.github/dependabot.yml'
@@ -104,6 +103,9 @@ jobs:
 
   homebrew:
     needs: update
+    permissions:
+      contents: write
+      pull-requests: write
     uses: Yarden-zamir/homebrew-tap/.github/workflows/sync-formula.yml@main
     with:
       formula: gh-source
