@@ -14,9 +14,29 @@ on:
       - '.github/FUNDING.yml'
       - '.github/SECURITY.md'
       - 'LICENSE.md'
+  pull_request:
 
 jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v6
+
+    - name: Check Zsh syntax
+      run: |
+        zsh -n gh-source.zsh
+        zsh -n zsh-completion/_gh_source
+
+    - name: Run contract tests
+      run: uv run tests/test_gh_source.py
+
   update:
+    if: github.event_name == 'push'
+    needs: test
     runs-on: macos-latest
     outputs:
       tag: ${{ steps.tag_version.outputs.new_tag }}

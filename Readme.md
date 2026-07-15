@@ -1,69 +1,135 @@
-# gh-source
-This is a plugin manager for people who don't like plugin managers. It's a simple shell function that downloads and installs plugins from GitHub as part of the sourcing step. It's designed to be used with [zsh](http://www.zsh.org/), but it should work with any shell.
+# gh-source v2
 
-## Installation
-in the terminal
-either clone this repo
-```sh
-git clone https://github.com/yarden-zamir/gh-source.git
-```
-or use a package manager
+gh-source v2 is a small Zsh-only GitHub plugin loader focused on fast startup and readable declarations.
 
-Homebrew tap: https://github.com/Yarden-zamir/homebrew-tap
+It clones missing repositories, detects existing regular or nested-worktree checkouts, performs declarative setup, and sources plugins in the active shell.
 
-```sh
+## Install
+
+```zsh
 brew install yarden-zamir/tap/gh-source
 ```
-then in your `.zshrc`   
-```sh
-source gh-source.zsh
-```
-(This is the last time you need to clone shell stuff manually)
-## Problem domains / needs
-1. Fast
-2. Simple
-3. Configuring/installing plugins in one location
-4. Updating plugins
-5. Opinionated - because all of my plugins are hosted on github, I can rely on that to make things easier and faster
-6. Customizable
 
-## Before / After
-As someone who didn't like all the stuff that comes with all the popular pluigin managers and hated how most don't even ofer proper updating system. I usually did the following
+Use the fixed path printed by `brew info gh-source` rather than running `brew --prefix` during every shell startup:
 
----
-in the terminal
-```sh
-git clone https://github.com/hlissner/zsh-autopair.git
+```zsh
+source /opt/homebrew/opt/gh-source/share/gh-source/gh-source.zsh
 ```
-then in my `.zshrc`
-```sh
-source ~/github/zsh-autopair/autopair.zsh
-```
----
-using gh-source, I don't need to run anything ahead of time, just add this line to my `.zshrc`
-```sh
+
+Only the `gh_source` function is provided.
+
+## Source Plugins
+
+```zsh
 gh_source hlissner/zsh-autopair/autopair.zsh
 ```
-and it will download and source the plugin for me. 
 
-This is useful for sharing dotfiles, because I don't need to share an instruction manual for what to clone before hand or a seperate script. Better yet it lets me update all my plugins easily with `gh_source --update`
+The path shorthand equals an explicit source action:
 
-## Help
-```sh
-Usage: prog [options] [plugin] [install_command] [install_location]
-Examples:
-  gh-source owner/repo/script.zsh
-  gh-source owner/repo 'source {}/script.zsh && echo potato'
-  gh-source owner/repo 'source {}/script.zsh && echo potato' /home/user/special_location
-  gh-source --update
-Options:
-  --help: print this help message
-  --update: update all plugins
-  --list: list all plugins
-Arguments:
-  plugin: the plugin to source. If no install_command is passed, it will assume the last segment is the file to source (default install command)
-  install_command: the command to run to install the plugin (default: 'source {}/$(echo "$1" | cut -d'/' -f3-) where {} is replaced by install location. meaning that if your plugin is owner/repo/plug.zsh, it will run 'source $install_location/plug.zsh
-  install_location: the location to install the plugin to (default: $GH_SOURCE_INSTALL_LOCATION/$(basename $install_source))
+```zsh
+gh_source hlissner/zsh-autopair --source autopair.zsh
 ```
 
-https://github.com/Yarden-zamir/gh-source/assets/8178413/a4c58620-74fe-4f37-8cb1-4c1ad9ff2428
+Additional sources run in declaration order:
+
+```zsh
+gh_source junegunn/fzf/shell/completion.zsh \
+  --path bin \
+  --preserve-zsh-options \
+  --source shell/key-bindings.zsh
+```
+
+`--preserve-zsh-options` runs sources in Zsh's native `LOCAL_OPTIONS` scope. It prevents option changes from leaking on success or failure and hides `$options` for scripts such as fzf that try to restore the immutable `zle` option. Ordinary calls do not inspect or restore options.
+
+With no explicit source, `gh_source owner/repo` checks the resolved checkout root for:
+
+```text
+<repo>.plugin.zsh
+<repo>.zsh
+init.zsh
+```
+
+Files under `scripts/` or other directories require an explicit path.
+
+## PATH And Completions
+
+```zsh
+gh_source owner/tool --path bin
+gh_source owner/completions --fpath zsh
+```
+
+`--path` appends to `PATH`. `--fpath` prepends to `fpath`. Both resolve relative to the selected checkout and avoid duplicate entries.
+
+## Conditional Builds
+
+```zsh
+gh_source Yarden-zamir/navgator/scripts/navgator.zsh \
+  --skip-build-if-present navgator \
+  --skip-build-if-present target/release/navgator \
+  --build cargo build --release
+```
+
+Each predicate first checks for a regular file under the checkout, then calls `command -v` with the same value. Any match skips the build.
+
+`--build` must be final. Its argv runs directly in a subshell rooted at the checkout. Build commands receive:
+
+```text
+GH_SOURCE_DIR
+GH_SOURCE_REPO
+GH_SOURCE_REPO_NAME
+```
+
+A successful build must make at least one predicate true.
+
+## Repository Layout
+
+Repositories default to:
+
+```text
+$GH_SOURCE_ROOT/<repo>
+```
+
+`GH_SOURCE_ROOT` defaults to `$HOME/Github`.
+
+Missing repositories always clone normally. Existing worktree containers resolve automatically through `.bare/HEAD`, with `main/` as fallback.
+
+To convert a cloned repository to the nested layout, use dedicated worktree tooling:
+
+```zsh
+"$DOTFILES/bin/wt-migrate" --yes "$HOME/Github/<repo>"
+```
+
+The next `gh_source` call automatically uses the primary worktree. gh-source does not create `_shared/`, convert repositories, or select arbitrary worktrees.
+
+## State And Updates
+
+```zsh
+gh_source --loaded owner/repo
+gh_source --loaded owner/repo/file.zsh
+gh_source --list
+gh_source --update
+```
+
+Sources load once per shell. Only complete successful activations are registered.
+
+Updates deduplicate resolved roots, refuse dirty repositories, and run `git pull --ff-only`. They never reset or discard changes.
+
+## Source Semantics
+
+Sources see caller Zsh options. Option changes persist unless `--preserve-zsh-options` is present.
+
+Zsh treats plain `typeset` inside any function as local; plugins must use assignment or `typeset -g` for persistent globals.
+
+Parameter names beginning with `_ghs_` are reserved for loader internals while sources run.
+
+If sourcing fails, PATH, fpath, and effects from any started source cannot be rolled back.
+
+## Development
+
+```zsh
+uv run tests/test_gh_source.py
+uvx ruff check tests/test_gh_source.py
+zsh -n gh-source.zsh
+```
+
+The complete v2 behavior contract is in [`docs/specs/v2.md`](docs/specs/v2.md). Migration notes are in [`PLUGIN_LOADING_BEHAVIOR.md`](PLUGIN_LOADING_BEHAVIOR.md).

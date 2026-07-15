@@ -21,4 +21,8 @@ class GhSource < Formula
         source #{opt_pkgshare}/gh-source.zsh
     EOS
   end
+
+  test do
+    assert_match "Usage:", shell_output("zsh -fc 'source #{pkgshare}/gh-source.zsh; gh_source --help'")
+  end
 end
